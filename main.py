@@ -14,7 +14,7 @@ from tqdm import tqdm
 from construct_email import render_email, send_email
 from llm import set_global_llm
 from paper import ArxivPaper
-from recommender import rerank_paper
+from recommender import rank_papers
 
 load_dotenv(override=True)
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -192,7 +192,7 @@ if __name__ == "__main__":
             exit(0)
     else:
         logger.info("Reranking papers...")
-        papers = rerank_paper(papers, corpus)
+        papers = rank_papers(papers, corpus)
         if args.max_paper_num != -1:
             papers = papers[: args.max_paper_num]
         if args.use_llm_api:

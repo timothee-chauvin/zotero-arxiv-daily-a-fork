@@ -1,17 +1,29 @@
 from sentence_transformers import SentenceTransformer
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import OneClassSVM
 
 from paper import ArxivPaper
 
 
-def rerank_paper(
-    candidate: list[ArxivPaper], corpus: list[dict], model: str = "avsolatorio/GIST-small-Embedding-v0"
+def rank_papers(
+    candidates: list[ArxivPaper],
+    corpus: list[dict],
+    model: str = "avsolatorio/GIST-small-Embedding-v0",
+    nu: float = 0.1,
+    gamma: str = "scale",
 ) -> list[ArxivPaper]:
     encoder = SentenceTransformer(model)
-    corpus_feature = encoder.encode([paper["data"]["abstractNote"] for paper in corpus])
-    candidate_feature = encoder.encode([paper.summary for paper in candidate])
-    sim = encoder.similarity(candidate_feature, corpus_feature)  # [n_candidate, n_corpus]
-    scores = sim.sum(axis=1) * 10  # [n_candidate]
-    for s, c in zip(scores, candidate):
-        c.score = s.item()
-    candidate = sorted(candidate, key=lambda x: x.score, reverse=True)
-    return candidate
+    corpus_features = encoder.encode([paper["data"]["abstractNote"] for paper in corpus])
+    candidate_features = encoder.encode([paper.summary for paper in candidates])
+
+    scaler = StandardScaler()
+    corpus_features_scaled = scaler.fit_transform(corpus_features)
+    candidate_features_scaled = scaler.transform(candidate_features)
+
+    ocsvm = OneClassSVM(nu=nu, kernel="rbf", gamma=gamma)
+    ocsvm.fit(corpus_features_scaled)
+    scores = ocsvm.decision_function(candidate_features_scaled)
+    for score, candidate in zip(scores, candidates):
+        candidate.score = score.item()
+    candidates = sorted(candidates, key=lambda x: x.score, reverse=True)
+    return candidates
