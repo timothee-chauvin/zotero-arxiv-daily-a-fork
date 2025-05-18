@@ -121,10 +121,10 @@ if __name__ == "__main__":
         default=False,
     )
     add_argument(
-        "--max_paper_num",
-        type=int,
-        help="Maximum number of papers to recommend",
-        default=100,
+        "--min_score",
+        type=float,
+        help="Minimum score of papers to recommend",
+        default=-0.1,
     )
     add_argument("--arxiv_query", type=str, help="Arxiv search query", required=True)
     add_argument("--smtp_server", type=str, help="SMTP server", required=True)
@@ -184,29 +184,23 @@ if __name__ == "__main__":
         logger.info(f"Remaining {len(corpus)} papers after filtering.")
     logger.info("Retrieving Arxiv papers...")
     papers = get_arxiv_paper(args.arxiv_query, args.debug)
-    if len(papers) == 0:
-        logger.info(
-            "No new papers found. Yesterday maybe a holiday and no one submit their work :). If this is not the case, please check the ARXIV_QUERY."
+    n_papers_init = len(papers)
+    logger.info("Ranking papers...")
+    papers = rank_papers(papers, corpus, min_score=args.min_score)
+    if len(papers) == 0 and not args.send_empty:
+        logger.info(f"No papers found above the threshold {args.min_score} (out of {n_papers_init} papers). Exit.")
+        exit(0)
+    if args.use_llm_api:
+        logger.info("Using OpenAI API as global LLM.")
+        set_global_llm(
+            api_key=args.openai_api_key,
+            base_url=args.openai_api_base,
+            model=args.model_name,
+            lang=args.language,
         )
-        if not args.send_empty:
-            exit(0)
     else:
-        logger.info("Reranking papers...")
-        papers = rank_papers(papers, corpus)
-        if args.max_paper_num != -1:
-            papers = papers[: args.max_paper_num]
-        if args.use_llm_api:
-            logger.info("Using OpenAI API as global LLM.")
-            set_global_llm(
-                api_key=args.openai_api_key,
-                base_url=args.openai_api_base,
-                model=args.model_name,
-                lang=args.language,
-            )
-        else:
-            logger.info("Using Local LLM as global LLM.")
-            set_global_llm(lang=args.language)
-
+        logger.info("Using Local LLM as global LLM.")
+        set_global_llm(lang=args.language)
     html = render_email(papers)
     logger.info("Sending email...")
     send_email(

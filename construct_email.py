@@ -1,12 +1,10 @@
 import datetime
-import math
 import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
 from email.utils import formataddr, parseaddr
 
 from loguru import logger
-from tqdm import tqdm
 
 from paper import ArxivPaper
 
@@ -65,18 +63,11 @@ def get_empty_html():
 def get_block_html(
     title: str,
     authors: str,
-    rate: str,
+    score: float,
     arxiv_id: str,
     abstract: str,
     pdf_url: str,
-    code_url: str = None,
-    affiliations: str = None,
 ):
-    code = (
-        f'<a href="{code_url}" style="display: inline-block; text-decoration: none; font-size: 14px; font-weight: bold; color: #fff; background-color: #5bc0de; padding: 8px 16px; border-radius: 4px; margin-left: 8px;">Code</a>'
-        if code_url
-        else ""
-    )
     block_template = """
     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-family: Arial, sans-serif; border: 1px solid #ddd; border-radius: 8px; padding: 16px; background-color: #f9f9f9;">
     <tr>
@@ -87,13 +78,11 @@ def get_block_html(
     <tr>
         <td style="font-size: 14px; color: #666; padding: 8px 0;">
             {authors}
-            <br>
-            <i>{affiliations}</i>
         </td>
     </tr>
     <tr>
         <td style="font-size: 14px; color: #333; padding: 8px 0;">
-            <strong>Relevance:</strong> {rate}
+            <strong>Score:</strong> {score:.2f}
         </td>
     </tr>
     <tr>
@@ -103,14 +92,13 @@ def get_block_html(
     </tr>
     <tr>
         <td style="font-size: 14px; color: #333; padding: 8px 0;">
-            <strong>TLDR:</strong> {abstract}
+            <strong>Abstract:</strong> {abstract}
         </td>
     </tr>
 
     <tr>
         <td style="padding: 8px 0;">
             <a href="{pdf_url}" style="display: inline-block; text-decoration: none; font-size: 14px; font-weight: bold; color: #fff; background-color: #d9534f; padding: 8px 16px; border-radius: 4px;">PDF</a>
-            {code}
         </td>
     </tr>
 </table>
@@ -118,30 +106,11 @@ def get_block_html(
     return block_template.format(
         title=title,
         authors=authors,
-        rate=rate,
+        score=score,
         arxiv_id=arxiv_id,
         abstract=abstract,
         pdf_url=pdf_url,
-        code=code,
-        affiliations=affiliations,
     )
-
-
-def get_stars(score: float):
-    full_star = '<span class="full-star">⭐</span>'
-    half_star = '<span class="half-star">⭐</span>'
-    low = 6
-    high = 8
-    if score <= low:
-        return ""
-    elif score >= high:
-        return full_star * 5
-    else:
-        interval = (high - low) / 10
-        star_num = math.ceil((score - low) / interval)
-        full_star_num = int(star_num / 2)
-        half_star_num = star_num - full_star_num * 2
-        return '<div class="star-wrapper">' + full_star * full_star_num + half_star * half_star_num + "</div>"
 
 
 def render_email(papers: list[ArxivPaper]):
@@ -149,20 +118,12 @@ def render_email(papers: list[ArxivPaper]):
     if len(papers) == 0:
         return framework.replace("__CONTENT__", get_empty_html())
 
-    for p in tqdm(papers, desc="Rendering Email"):
-        rate = get_stars(p.score)
+    for p in papers:
         authors = [a.name for a in p.authors[:5]]
         authors = ", ".join(authors)
         if len(p.authors) > 5:
             authors += ", ..."
-        if p.affiliations is not None:
-            affiliations = p.affiliations[:5]
-            affiliations = ", ".join(affiliations)
-            if len(p.affiliations) > 5:
-                affiliations += ", ..."
-        else:
-            affiliations = "Unknown Affiliation"
-        parts.append(get_block_html(p.title, authors, rate, p.arxiv_id, p.tldr, p.pdf_url, p.code_url, affiliations))
+        parts.append(get_block_html(p.title, authors, p.score, p.arxiv_id, p.summary, p.pdf_url))
 
     content = "<br>" + "</br><br>".join(parts) + "</br>"
     return framework.replace("__CONTENT__", content)

@@ -1,3 +1,4 @@
+from loguru import logger
 from sentence_transformers import SentenceTransformer
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import OneClassSVM
@@ -11,6 +12,7 @@ def rank_papers(
     model: str = "avsolatorio/GIST-small-Embedding-v0",
     nu: float = 0.1,
     gamma: str = "scale",
+    min_score: float = -0.1,
 ) -> list[ArxivPaper]:
     encoder = SentenceTransformer(model)
     corpus_features = encoder.encode([paper["data"]["abstractNote"] for paper in corpus])
@@ -23,7 +25,10 @@ def rank_papers(
     ocsvm = OneClassSVM(nu=nu, kernel="rbf", gamma=gamma)
     ocsvm.fit(corpus_features_scaled)
     scores = ocsvm.decision_function(candidate_features_scaled)
+    logger.debug(f"min score: {min(scores).item():.3f}")
+    logger.debug(f"max score: {max(scores).item():.3f}")
     for score, candidate in zip(scores, candidates):
         candidate.score = score.item()
+    candidates = [c for c in candidates if c.score >= min_score]
     candidates = sorted(candidates, key=lambda x: x.score, reverse=True)
     return candidates
