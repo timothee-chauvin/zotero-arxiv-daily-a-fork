@@ -110,8 +110,8 @@ def add_argument(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    add_argument("--zotero_id", type=str, help="Zotero user ID", required=True)
-    add_argument("--zotero_key", type=str, help="Zotero API key", required=True)
+    add_argument("--zotero_id", type=str, help="Zotero user ID")
+    add_argument("--zotero_key", type=str, help="Zotero API key")
     add_argument(
         "--zotero_ignore",
         type=str,
@@ -129,18 +129,18 @@ if __name__ == "__main__":
         help="Minimum score of papers to recommend",
         default=-0.1,
     )
-    add_argument("--arxiv_query", type=str, help="Arxiv search query", required=True)
+    add_argument("--arxiv_query", type=str, help="Arxiv search query")
     add_argument(
         "--zotero_tags",
         type=str,
         help="Comma-separated list of Zotero tags. Each tag will result in a separate list of papers. If not provided, the full Zotero corpus is considered.",
         default=None,
     )
-    add_argument("--smtp_server", type=str, help="SMTP server", required=True)
-    add_argument("--smtp_port", type=int, help="SMTP port", required=True)
-    add_argument("--sender", type=str, help="Sender email address", required=True)
-    add_argument("--receiver", type=str, help="Receiver email address", required=True)
-    add_argument("--sender_password", type=str, help="Sender email password", required=True)
+    add_argument("--smtp_server", type=str, help="SMTP server")
+    add_argument("--smtp_port", type=int, help="SMTP port")
+    add_argument("--sender", type=str, help="Sender email address")
+    add_argument("--receiver", type=str, help="Receiver email address")
+    add_argument("--sender_password", type=str, help="Sender email password")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
     args = parser.parse_args()
     if args.debug:
