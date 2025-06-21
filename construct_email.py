@@ -3,6 +3,7 @@ import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
 from email.utils import formataddr, parseaddr
+from typing import Any
 
 from loguru import logger
 
@@ -68,8 +69,85 @@ def get_empty_html():
     return block_template
 
 
+def get_stats_html(papers: list[ArxivPaper], debug_info: dict[str, Any]):
+    stats_parts = []
+    stats_parts.append("<div style='font-family: Arial, sans-serif; margin-bottom: 24px;'>")
+    stats_parts.append("<h3>Statistics:</h3>")
+    stats_parts.append("<ul>")
+    stats_parts.append(f"<li>Min Score: {debug_info['min_score']:.2f}</li>")
+    stats_parts.append(f"<li>Max Score: {debug_info['max_score']:.2f}</li>")
+    stats_parts.append(f"<li>Threshold: {debug_info['threshold']}</li>")
+    stats_parts.append(f"<li>Matching Papers: {len(papers)} / {debug_info['papers_considered']}</li>")
+    stats_parts.append("</ul>")
+    stats_parts.append("</div>")
+    return "".join(stats_parts)
+
+
+def get_toc_html(
+    papers_by_section: dict[str | None, list[ArxivPaper]],
+    debug_info: dict[str | None, dict],
+    global_debug_info: dict[str, Any],
+):
+    """Generate Table of Contents with debug information."""
+    toc_parts = []
+    toc_parts.append("<div style='font-family: Arial, sans-serif; margin-bottom: 24px;'>")
+    toc_parts.append("<h3>Table of Contents:</h3>")
+
+    # Create table structure
+    toc_parts.append("""
+    <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; font-size: 14px;">
+        <thead>
+            <tr style="background-color: #f5f5f5;">
+                <th style="text-align: left; padding: 10px;">Tag</th>
+                <th style="text-align: center; padding: 10px;">Min Score</th>
+                <th style="text-align: center; padding: 10px;">Max Score</th>
+                <th style="text-align: center; padding: 10px;">Threshold</th>
+                <th style="text-align: center; padding: 10px;">Matching</th>
+            </tr>
+        </thead>
+        <tbody>
+    """)
+
+    threshold = global_debug_info["threshold"]
+    papers_considered = global_debug_info["papers_considered"]
+
+    for section_name in sorted(papers_by_section.keys()):
+        papers = papers_by_section.get(section_name, [])
+        matching_papers = len(papers)
+        section_debug = debug_info.get(section_name, {}) if debug_info else {}
+
+        # Get debug info values
+        min_score = section_debug["min_score"]
+        max_score = section_debug["max_score"]
+
+        # Create table row
+        toc_parts.append("<tr>")
+
+        # Tag column - with link if there are matching papers
+        if matching_papers == 0:
+            toc_parts.append(f'<td style="padding: 8px;">{section_name}</td>')
+        else:
+            section_id = section_name.lower().replace(" ", "-").replace("_", "-")
+            toc_parts.append(f'<td style="padding: 8px;"><a href="#{section_id}">{section_name}</a></td>')
+
+        # Other columns
+        toc_parts.append(f'<td style="text-align: center; padding: 8px;">{min_score:.2f}</td>')
+        toc_parts.append(f'<td style="text-align: center; padding: 8px;">{max_score:.2f}</td>')
+        toc_parts.append(f'<td style="text-align: center; padding: 8px;">{threshold}</td>')
+        toc_parts.append(f'<td style="text-align: center; padding: 8px;">{matching_papers} / {papers_considered}</td>')
+
+        toc_parts.append("</tr>")
+
+    toc_parts.append("</tbody>")
+    toc_parts.append("</table>")
+    toc_parts.append("</div>")
+
+    return "".join(toc_parts)
+
+
 def get_section_header_html(section_name: str):
-    return f'<div class="section-header">{section_name}</div>'
+    section_id = section_name.lower().replace(" ", "-").replace("_", "-")
+    return f'<div class="section-header" id="{section_id}">{section_name}</div>'
 
 
 def get_block_html(
@@ -125,20 +203,34 @@ def get_block_html(
     )
 
 
-def render_email(papers_by_section: dict[str, list[ArxivPaper]]):
+def render_email(
+    papers_by_tag: dict[str | None, list[ArxivPaper]],
+    debug_info: dict[str | None, dict],
+    global_debug_info: dict[str, Any],
+):
     all_parts = []
-    total_papers = sum(len(papers) for papers in papers_by_section.values())
+    total_papers = sum(len(papers) for papers in papers_by_tag.values())
+    use_sections = global_debug_info["use_sections"]
 
     if total_papers == 0:
+        if debug_info:
+            empty_content = get_stats_html(papers_by_tag[None], debug_info[None] | global_debug_info) + get_empty_html()
+            return framework.replace("__CONTENT__", empty_content)
         return framework.replace("__CONTENT__", get_empty_html())
 
-    for section_name, papers in papers_by_section.items():
+    if use_sections:
+        all_parts.append(get_toc_html(papers_by_tag, debug_info, global_debug_info))
+    else:
+        all_parts.append(get_stats_html(papers_by_tag[None], debug_info[None] | global_debug_info))
+
+    for section_name, papers in papers_by_tag.items():
         if not papers:
             continue
 
         section_parts = []
 
-        if len(papers_by_section) > 1 or section_name != "All Papers":
+        # Add section header only if using sections
+        if use_sections:
             section_parts.append(get_section_header_html(section_name))
 
         for p in papers:

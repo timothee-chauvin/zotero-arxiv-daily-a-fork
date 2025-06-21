@@ -202,6 +202,7 @@ if __name__ == "__main__":
         logger.info(f"Processing papers for tags: {tags}")
 
         tag_papers = {}
+        tag_debug_info = {}
         for tag in tags:
             logger.info(f"Ranking papers for tag: {tag}")
             tag_corpus = filter_corpus_by_tag(corpus, tag)
@@ -209,27 +210,34 @@ if __name__ == "__main__":
                 logger.warning(f"No papers found in Zotero corpus with tag '{tag}'. Skipping.")
                 continue
             logger.info(f"Found {len(tag_corpus)} papers with tag '{tag}' in Zotero corpus.")
-            ranked_papers = rank_papers(papers.copy(), tag_corpus, min_score=args.min_score)
+
+            ranked_papers, debug_info = rank_papers(papers.copy(), tag_corpus, min_score=args.min_score)
+
+            tag_debug_info[tag] = debug_info
+            tag_papers[tag] = ranked_papers
             if ranked_papers:
-                tag_papers[tag] = ranked_papers
                 logger.info(f"Found {len(ranked_papers)} papers above threshold for tag '{tag}'.")
             else:
                 logger.info(f"No papers found above threshold {args.min_score} for tag '{tag}'.")
 
-        if not tag_papers and not args.send_empty:
+        if not any(tag_papers.values()) and not args.send_empty:
             logger.info(
                 f"No papers found above the threshold {args.min_score} for any tag (out of {n_papers_init} papers). Exit."
             )
             exit(0)
 
         all_papers = tag_papers
+        debug_info = tag_debug_info
+        use_sections = True
     else:
         logger.info("Ranking papers against full corpus...")
-        papers = rank_papers(papers, corpus, min_score=args.min_score)
+        papers, debug_info = rank_papers(papers, corpus, min_score=args.min_score)
         if len(papers) == 0 and not args.send_empty:
             logger.info(f"No papers found above the threshold {args.min_score} (out of {n_papers_init} papers). Exit.")
             exit(0)
-        all_papers = {"All Papers": papers}
+        all_papers = {None: papers}
+        debug_info = {None: debug_info}
+        use_sections = False
 
     if args.use_llm_api:
         logger.info("Using OpenAI API as global LLM.")
@@ -243,7 +251,13 @@ if __name__ == "__main__":
         logger.info("Using Local LLM as global LLM.")
         set_global_llm(lang=args.language)
 
-    html = render_email(all_papers)
+    global_debug_info = {
+        "threshold": args.min_score,
+        "papers_considered": n_papers_init,
+        "use_sections": use_sections,
+    }
+
+    html = render_email(all_papers, debug_info, global_debug_info)
     logger.info("Sending email...")
     send_email(
         args.sender,
