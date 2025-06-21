@@ -75,13 +75,12 @@ def get_arxiv_paper(query: str, debug: bool = False) -> list[ArxivPaper]:
         bar.close()
 
     else:
-        logger.debug("Retrieve 5 arxiv papers regardless of the date.")
-        search = arxiv.Search(query="cat:cs.AI", sort_by=arxiv.SortCriterion.SubmittedDate)
-        papers = []
-        for i in client.results(search):
-            papers.append(ArxivPaper(i))
-            if len(papers) == 5:
-                break
+        n_papers = 5
+        logger.debug(f"Retrieve {n_papers} arxiv papers regardless of the date.")
+        search = arxiv.Search(
+            query="cat:cs.AI OR cat:cs.CR OR cat:cs.LG", sort_by=arxiv.SortCriterion.SubmittedDate, max_results=n_papers
+        )
+        papers = [ArxivPaper(p) for p in client.results(search)]
 
     return papers
 
