@@ -12,7 +12,6 @@ from pyzotero import zotero
 from tqdm import tqdm
 
 from construct_email import render_email, send_email
-from llm import set_global_llm
 from paper import ArxivPaper
 from recommender import rank_papers
 
@@ -142,41 +141,8 @@ if __name__ == "__main__":
     add_argument("--sender", type=str, help="Sender email address", required=True)
     add_argument("--receiver", type=str, help="Receiver email address", required=True)
     add_argument("--sender_password", type=str, help="Sender email password", required=True)
-    add_argument(
-        "--use_llm_api",
-        type=bool,
-        help="Use OpenAI API to generate TLDR",
-        default=False,
-    )
-    add_argument(
-        "--openai_api_key",
-        type=str,
-        help="OpenAI API key",
-        default=None,
-    )
-    add_argument(
-        "--openai_api_base",
-        type=str,
-        help="OpenAI API base URL",
-        default="https://api.openai.com/v1",
-    )
-    add_argument(
-        "--model_name",
-        type=str,
-        help="LLM Model Name",
-        default="gpt-4o",
-    )
-    add_argument(
-        "--language",
-        type=str,
-        help="Language of TLDR",
-        default="English",
-    )
     parser.add_argument("--debug", action="store_true", help="Debug mode")
     args = parser.parse_args()
-    assert (
-        not args.use_llm_api or args.openai_api_key is not None
-    )  # If use_llm_api is True, openai_api_key must be provided
     if args.debug:
         logger.remove()
         logger.add(sys.stdout, level="DEBUG")
@@ -242,18 +208,6 @@ if __name__ == "__main__":
         all_papers = {None: papers}
         debug_info = {None: debug_info}
         use_sections = False
-
-    if args.use_llm_api:
-        logger.info("Using OpenAI API as global LLM.")
-        set_global_llm(
-            api_key=args.openai_api_key,
-            base_url=args.openai_api_base,
-            model=args.model_name,
-            lang=args.language,
-        )
-    else:
-        logger.info("Using Local LLM as global LLM.")
-        set_global_llm(lang=args.language)
 
     global_debug_info = {
         "threshold": args.min_score,
