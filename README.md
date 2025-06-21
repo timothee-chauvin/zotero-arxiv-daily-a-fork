@@ -14,4 +14,5 @@ Overall, the two new variables for the github workflow are `ZOTERO_TAGS` and `MI
 
 * runs at 6am UTC, 2 hours after arxiv updates its RSS feed.
 * pre-commit is used, code is formatted with [ruff](https://github.com/astral-sh/ruff)
+* Dockerfile and docker-compose.yml have been removed
 * various improvements to the codebase
