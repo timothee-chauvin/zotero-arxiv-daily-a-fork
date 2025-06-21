@@ -8,7 +8,7 @@ This is a fork of [zotero-arxiv-daily](https://github.com/TideDra/zotero-arxiv-d
 * this fork **doesn't call an LLM** to parse affiliations / presence of a codebase, or generate a one-sentence tldr (these steps are very slow). Variables `USE_LLM_API`, `OPENAI_API_KEY`, `OPENAI_API_BASE`, `MODEL_NAME`, and `LANGUAGE` are removed.
 * all Zotero papers (within a tag or the full corpus) are ranked equally, **without a time decay factor**.
 
-Overall, the two new variables for the github workflow are `ZOTERO_TAGS` and `MIN_SCORE`, both optional.
+Overall, the two new variables for the github workflow are `ZOTERO_TAGS` and `MIN_SCORE`, both optional. They must be set as repository secrets, like `ZOTERO_ID` etc.
 
 (minor / dev)
 
