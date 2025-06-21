@@ -58,7 +58,7 @@ def filter_corpus_by_tag(corpus: list[dict], tag: str) -> list[dict]:
     return [c for c in corpus if any(t["tag"] == tag for t in c["data"]["tags"])]
 
 
-def get_arxiv_paper(query: str, debug: bool = False) -> list[ArxivPaper]:
+def get_arxiv_papers(query: str, debug: bool = False) -> list[ArxivPaper]:
     client = arxiv.Client(num_retries=10, delay_seconds=10)
     feed = feedparser.parse(f"https://rss.arxiv.org/atom/{query}")
     if "Feed error for query" in feed.feed.title:
@@ -185,6 +185,14 @@ if __name__ == "__main__":
         logger.remove()
         logger.add(sys.stdout, level="INFO")
 
+    logger.info("Retrieving Arxiv papers...")
+    papers = get_arxiv_papers(args.arxiv_query, args.debug)
+    n_papers_init = len(papers)
+
+    if n_papers_init == 0:
+        logger.info("No Arxiv papers found. Exit.")
+        exit(0)
+
     logger.info("Retrieving Zotero corpus...")
     corpus = get_zotero_corpus(args.zotero_id, args.zotero_key)
     logger.info(f"Retrieved {len(corpus)} papers from Zotero.")
@@ -192,9 +200,6 @@ if __name__ == "__main__":
         logger.info(f"Ignoring papers in:\n {args.zotero_ignore}...")
         corpus = filter_corpus(corpus, args.zotero_ignore)
         logger.info(f"Remaining {len(corpus)} papers after filtering.")
-    logger.info("Retrieving Arxiv papers...")
-    papers = get_arxiv_paper(args.arxiv_query, args.debug)
-    n_papers_init = len(papers)
 
     if args.zotero_tags:
         tags = [tag.strip() for tag in args.zotero_tags.split(",")]
