@@ -29,6 +29,14 @@ framework = """
     .full-star {
       vertical-align: middle;
     }
+    .section-header {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin: 20px 0 16px 0;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #3498db;
+    }
   </style>
 </head>
 <body>
@@ -58,6 +66,10 @@ def get_empty_html():
   </table>
   """
     return block_template
+
+
+def get_section_header_html(section_name: str):
+    return f'<div class="section-header">{section_name}</div>'
 
 
 def get_block_html(
@@ -113,19 +125,32 @@ def get_block_html(
     )
 
 
-def render_email(papers: list[ArxivPaper]):
-    parts = []
-    if len(papers) == 0:
+def render_email(papers_by_section: dict[str, list[ArxivPaper]]):
+    all_parts = []
+    total_papers = sum(len(papers) for papers in papers_by_section.values())
+
+    if total_papers == 0:
         return framework.replace("__CONTENT__", get_empty_html())
 
-    for p in papers:
-        authors = [a.name for a in p.authors[:5]]
-        authors = ", ".join(authors)
-        if len(p.authors) > 5:
-            authors += ", ..."
-        parts.append(get_block_html(p.title, authors, p.score, p.arxiv_id, p.summary, p.pdf_url))
+    for section_name, papers in papers_by_section.items():
+        if not papers:
+            continue
 
-    content = "<br>" + "</br><br>".join(parts) + "</br>"
+        section_parts = []
+
+        if len(papers_by_section) > 1 or section_name != "All Papers":
+            section_parts.append(get_section_header_html(section_name))
+
+        for p in papers:
+            authors = [a.name for a in p.authors[:5]]
+            authors = ", ".join(authors)
+            if len(p.authors) > 5:
+                authors += ", ..."
+            section_parts.append(get_block_html(p.title, authors, p.score, p.arxiv_id, p.summary, p.pdf_url))
+
+        all_parts.extend(section_parts)
+
+    content = "<br>" + "</br><br>".join(all_parts) + "</br>"
     return framework.replace("__CONTENT__", content)
 
 
