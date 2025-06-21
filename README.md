@@ -10,5 +10,6 @@ This is a fork of [zotero-arxiv-daily](https://github.com/TideDra/zotero-arxiv-d
 
 (minor / dev)
 
+* runs at 6am UTC, 2 hours after arxiv updates its RSS feed.
 * pre-commit is used, code is formatted with [ruff](https://github.com/astral-sh/ruff)
 * various improvements to the codebase

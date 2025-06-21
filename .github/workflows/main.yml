@@ -2,7 +2,7 @@ name: Send emails daily
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 22 * * *'
+    - cron: '0 6 * * *'
 
 jobs:
   calculate-and-send:
@@ -31,7 +31,8 @@ jobs:
           SENDER: ${{ secrets.SENDER }}
           RECEIVER: ${{ secrets.RECEIVER }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
-          MAX_PAPER_NUM: ${{ secrets.MAX_PAPER_NUM }}
+          ZOTERO_TAGS: ${{ vars.ZOTERO_TAGS }}
+          MIN_SCORE: ${{ vars.MIN_SCORE }}
           USE_LLM_API: ${{ secrets.USE_LLM_API }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
